@@ -9,8 +9,12 @@ const DEFAULT_DURATION_SECONDS = 45;
 const defaultProps: StoryVideoProps = {
   scenes: [],
   audioUrl: "",
-  audioDurationInSeconds: DEFAULT_DURATION_SECONDS,
 };
+
+export function sumSceneSeconds(scenes: StoryVideoProps["scenes"]): number {
+  const total = scenes.reduce((sum, s) => sum + (s.durationInSeconds > 0 ? s.durationInSeconds : 0), 0);
+  return total > 0 ? total : DEFAULT_DURATION_SECONDS;
+}
 
 export function RemotionRoot() {
   return (
@@ -23,8 +27,7 @@ export function RemotionRoot() {
       height={VIDEO_HEIGHT}
       defaultProps={defaultProps}
       calculateMetadata={async ({ props }) => {
-        const seconds = props.audioDurationInSeconds > 0 ? props.audioDurationInSeconds : DEFAULT_DURATION_SECONDS;
-        return { durationInFrames: Math.max(1, Math.round(seconds * FPS)) };
+        return { durationInFrames: Math.max(1, Math.round(sumSceneSeconds(props.scenes) * FPS)) };
       }}
     />
   );

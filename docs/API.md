@@ -146,35 +146,54 @@ Calls `generateGhibliImage` (`src/lib/gradio.ts`), which lazily connects once (`
 
 ## `POST /api/story/narration`
 
-Writes a short English narration script from the story and voices it.
+Writes the narration as **one segment per scene** (not one flat script) and voices all of them, so each scene's video time, and its subtitle, can match exactly how long its own dialogue takes to speak.
 
 **Request body**
 
 ```json
-{ "story": "<the full story text>", "problem": "<original situation text>" }
+{
+  "story": "<the full story text>",
+  "problem": "<original situation text>",
+  "sceneCount": 4,
+  "voice": "female",
+  "speed": 1
+}
 ```
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `story` | `string` | yes | |
+| `problem` | `string` | no | extra context for the narrator |
+| `sceneCount` | `number` | no | defaults to 4, clamped to `[1, 8]` — should match the number of scenes you have images for |
+| `voice` | `"female" \| "male"` | no | defaults to `"female"` |
+| `speed` | `number` | no | defaults to `1`; applied post-synthesis via ffmpeg's `atempo` filter, clamped to `[0.5, 2]` |
 
 **Response** `200 OK`
 
 ```json
 {
   "audioUrl": "/generated/narration-<uuid>.mp3",
-  "script": "<the ~230-270 word English narration that was voiced>",
-  "durationInSeconds": 28.4
+  "segments": [
+    { "text": "Arjun, a young monk, woke each morning...", "durationInSeconds": 14.8 }
+  ],
+  "durationInSeconds": 55.4
 }
 ```
 
-`audioUrl` is a root-relative path served straight out of `public/generated/` (gitignored, created at runtime).
+`segments.length === sceneCount` always (see the guaranteed-split guarantee below). `audioUrl` is root-relative, served out of `public/generated/`.
 
 **What it does internally**
 
-1. `writeNarrationScript`: asks Groq (plain text, not JSON mode — see "Why text mode" below) for a 230-270 word flowing English narration (`temperature: 0.6`, `max_tokens: 4000`), with **one retry** if the response comes back empty. Strips a stray wrapping quote/backtick if the model adds one.
-2. `generateNarrationMp3` (`src/lib/kokoro.ts`): calls the public `ysharma/Make_Custom_Voices_With_KokoroTTS` Space's `/text_to_speech` endpoint with `formula: "1.0 * af_bella"` (that Space's older Kokoro v0.19 voice set doesn't include the newer `af_heart`), downloads the returned WAV, transcodes it to mp3 via `ffmpeg -codec:a libmp3lame -b:a 128k`, and reads back the exact duration via `ffprobe`.
-3. Saves to `public/generated/narration-<uuid>.mp3` and deletes the intermediate WAV.
+1. `writeNarrationSegments`: asks Groq (JSON mode, `temperature: 0.6`, `max_tokens: 4000`) for `{"segments": ["...", ...]}` with exactly `sceneCount` entries, roughly 140-170 words combined (calibrated to this voice's ~150-175 wpm pace, landing around 45-60s before any `speed` adjustment), explicitly instructed not to make one segment a full-story summary while the rest are short.
+2. **Validates the split, not just the JSON.** A response is only accepted if it has exactly `sceneCount` entries *and* no segment is severely imbalanced (`isSeverelyImbalanced`: the longest segment isn't disproportionately longer than the others' average). Up to 3 attempts.
+3. **Guaranteed fallback.** `gpt-oss-120b` has been observed *consistently* (not just occasionally) collapsing an entire story into one giant segment across every retry for some inputs — so retries alone aren't a guarantee. If every attempt fails validation, the best text seen is mechanically re-split into exactly `sceneCount` sentence-balanced pieces by `segmentIntoSentenceGroups` (`src/lib/segmentStory.ts`, plain sentence-boundary splitting, no LLM) rather than erroring out.
+4. `generateNarrationMp3` (`src/lib/kokoro.ts`): synthesizes **one TTS clip per segment** (not one call for the whole script — see below), measures each clip's real duration via `ffprobe`, concatenates them (ffmpeg concat demuxer), applies the `speed` retime if not `1`, and transcodes to mp3. Each segment's reported `durationInSeconds` is scaled by `speed` too, so it still matches the final audio exactly.
 
-**Why text mode, not JSON mode**: this call originally used `response_format: json_object` wrapping the script in `{"script": "..."}`. In practice `openai/gpt-oss-120b` was unreliable for this specific open-ended rewriting task under JSON mode — it would sometimes spend its entire token budget on hidden reasoning and return `failed_generation: ""`. Plain text completion, with a larger budget and a retry, has been reliable in testing.
+**Why per-segment TTS calls, not one call for the whole script**: a single Kokoro `generate()`-equivalent call caps out at roughly 25-30 seconds of audio *regardless of input length* (confirmed: 130 words and 216 words in one call both produced ~26-27s). Splitting into per-scene calls was already necessary for scene timing, and it incidentally fixes this cap too, since no individual segment is long enough to hit it.
 
-**Why a Hugging Face Space, not the `kokoro-js` npm package**: an earlier version ran `kokoro-js` directly in the Next.js process. Two real problems showed up: Turbopack rewrites module paths, which breaks `kokoro-js`'s internal resolution of its bundled voice files (worked around at the time via `serverExternalPackages`, since removed since the package is no longer used); and a single local `generate()` call caps out at roughly 25-30 seconds of audio *regardless of input length* (confirmed: 130 words and 216 words both produced ~26-27s). The remote Space has neither limitation, and offloads the ONNX inference entirely, which matters on a memory-constrained dev machine.
+**Why JSON mode here, unlike the single-script version this replaced**: the original single-flat-script endpoint used plain text completion because JSON mode was unreliable for that free-form prose task. Segments are structured data (an array), which is the same shape `/api/story/scenes` already gets right reliably in JSON mode — the failure mode here is different (wrong count / imbalance, not empty output), which is why it's handled with content validation rather than a mode switch.
+
+**Why a Hugging Face Space, not the `kokoro-js` npm package**: an earlier version ran `kokoro-js` directly in the Next.js process. Turbopack rewrites module paths, which broke `kokoro-js`'s internal resolution of its own bundled voice files, and offloading the ONNX inference to a remote Space matters on a memory-constrained dev machine regardless.
 
 **Errors**
 
@@ -182,8 +201,35 @@ Writes a short English narration script from the story and voices it.
 |---|---|
 | 400 | `story` missing or empty |
 | 500 | `GROQ_API_KEY` not configured |
-| 500 | Narration script generation failed (both attempts) |
+| 500 | Narration segment generation failed (all attempts *and* the deterministic fallback had nothing to work with — i.e. Groq returned nothing usable at all) |
 | 500 | The Kokoro Space call failed, or `ffmpeg`/`ffprobe` isn't on `PATH` |
+
+---
+
+## `POST /api/story/scenes/video`
+
+Generates (or mocks) a short real motion clip for **one** scene's already-generated image, via image-to-video. The frontend calls this once per scene, sequentially, after narration — same pattern as `/api/story/scenes/image`.
+
+**Request body**
+
+```json
+{ "imageUrl": "https://....hf.space/.../image.webp?...", "motionPrompt": "Ghibli style young monk sitting by a river, gentle breeze, cinematic" }
+```
+
+**Response** `200 OK` (always — a failed clip is not a fatal error, see below)
+
+```json
+{ "videoUrl": "https://....hf.space/.../output.mp4", "seed": 42, "mock": false }
+```
+
+- `mock: true` (default — see `MOCK_SCENE_VIDEO` in `.env`) skips the real Space entirely; `videoUrl` is `null` and the frontend falls back to that scene's static image with a Ken Burns pan only.
+- On a real but failed generation, this still returns `200` with `videoUrl: null` and an `error` field, rather than `500` — motion is an enhancement, not a requirement, so a failed clip degrades to the static-image fallback instead of breaking the whole video.
+
+**What it does internally (non-mock)**: calls `generateSceneClip` (`src/lib/ltxVideo.ts`), a cached `@gradio/client` connection to `Lightricks/ltx-video-distilled`'s `/image_to_video` endpoint, `mode: "image-to-video"`, `duration_ui: 4.5` seconds, at the same 576×1024 portrait frame as the scene images.
+
+**Why this is mocked by default, unlike scene images**: this Space runs on ZeroGPU — a GPU-minutes quota shared across *every* ZeroGPU Space on the Hugging Face account, not per-Space. It was exhausted after a single call to an unrelated ZeroGPU Space earlier in this project's development. Video diffusion is also far more compute-heavy than image generation or TTS, and there's no CPU fallback (unlike the TTS Space) because it would be far too slow to be usable. Leave `MOCK_SCENE_VIDEO=true` unless you specifically want real clips and are prepared for the quota risk.
+
+**Why 4.5 seconds**: the Space's own `duration_ui` parameter caps at 8.5s regardless of what's requested. A scene's remaining time (its narration segment's duration, typically 10-17s) beyond the clip is filled by freezing into the static image + Ken Burns pan (`src/remotion/StoryVideo.tsx`), not by looping the clip — LTX clips aren't guaranteed to loop seamlessly.
 
 ---
 
@@ -196,18 +242,27 @@ Renders the final narrated video from a set of scenes and a narration track. Thi
 ```json
 {
   "scenes": [
-    { "imageUrl": "/mock/scene-placeholder.webp", "caption": "The overwhelmed young monk" }
+    {
+      "imageUrl": "https://....hf.space/.../image.webp?...",
+      "videoUrl": null,
+      "caption": "The overwhelmed young monk",
+      "subtitle": "Arjun, a young monk, woke each morning with a heavy heart...",
+      "durationInSeconds": 14.8
+    }
   ],
-  "audioUrl": "/generated/narration-<uuid>.mp3",
-  "durationInSeconds": 28.4
+  "audioUrl": "/generated/narration-<uuid>.mp3"
 }
 ```
 
 | Field | Type | Notes |
 |---|---|---|
-| `scenes` | `{ imageUrl: string \| null; caption: string }[]` | scenes with a `null` `imageUrl` (still generating / failed) are filtered out server-side; at least one usable scene is required |
-| `audioUrl` | `string` | root-relative (`/generated/...`) or absolute — root-relative paths are resolved against the request's own origin |
-| `durationInSeconds` | `number` | the real measured narration duration from `/api/story/narration`; falls back to 45 if omitted or invalid |
+| `scenes` | array | a scene is dropped server-side if its `imageUrl` is falsy or `durationInSeconds <= 0`; at least one usable scene is required |
+| `scenes[].videoUrl` | `string \| null` | from `/api/story/scenes/video`; `null` means static image + Ken Burns only for that scene |
+| `scenes[].subtitle` | `string` | the exact narration text spoken during this scene — shown as a subtitle, not the short `caption` |
+| `scenes[].durationInSeconds` | `number` | **this scene's own slice of the narration** (from `/api/story/narration`'s `segments[i].durationInSeconds`), not an even division of the total |
+| `audioUrl` | `string` | root-relative or absolute; root-relative paths are resolved against the request's own origin |
+
+Note there's no longer a top-level `durationInSeconds` — the video's total length is the *sum* of `scenes[].durationInSeconds`, computed identically on both the server (`sumSceneSeconds` in `src/remotion/Root.tsx`, used by `calculateMetadata`) and the client (same function, used to size the `@remotion/player` preview).
 
 **Response** `200 OK`
 
@@ -215,22 +270,22 @@ Renders the final narrated video from a set of scenes and a narration track. Thi
 { "videoUrl": "/generated/video-<uuid>.mp4" }
 ```
 
-9:16 (720×1280), 30fps, h264/aac, duration matches `durationInSeconds` exactly (video length is driven by the audio, not the other way around).
+9:16 (720×1280), 30fps, h264/aac.
 
 **What it does internally**
 
-1. Resolves every `imageUrl`/`audioUrl` to an absolute URL using the request's own origin (`req.nextUrl.origin`), since Remotion's headless Chromium render needs fully-qualified URLs, not root-relative paths.
-2. Bundles the Remotion composition (`@remotion/bundler`'s `bundle()`, entry point `src/remotion/index.ts`) — cached per server process after the first call, since the output is immutable for the process's lifetime.
-3. `selectComposition` resolves the composition's metadata: `src/remotion/Root.tsx`'s `calculateMetadata` sets `durationInFrames = round(audioDurationInSeconds * 30)`, which is why the video always matches the narration length.
+1. Resolves every `imageUrl`/`videoUrl`/`audioUrl` to an absolute URL using the request's own origin, since Remotion's headless Chromium render needs fully-qualified URLs.
+2. Bundles the Remotion composition (`@remotion/bundler`'s `bundle()`, entry point `src/remotion/index.ts`) — cached per server process after the first call.
+3. `selectComposition` resolves metadata via `calculateMetadata`, which sums every scene's `durationInSeconds` for the total `durationInFrames`.
 4. `renderMedia` renders to `public/generated/video-<uuid>.mp4` with `codec: "h264"`.
 
-See `src/remotion/StoryVideo.tsx` for the actual per-scene composition: each scene gets an equal share of the timeline (the last scene absorbs any rounding remainder), a slow Ken Burns zoom (`scale 1 → 1.12` over its own duration), a 12-frame fade in/out between scenes, and its caption overlaid at the bottom over a gradient scrim. A single `<Audio>` spans the whole composition.
+See `src/remotion/StoryVideo.tsx` for the per-scene composition: each scene occupies exactly its own `durationInSeconds` (scenes are placed back to back by a running cursor, not divided evenly). Within a scene: if `videoUrl` is set, it plays for `min(scene duration, 4.5s)`, then the remaining time (if any) shows the static image with a Ken Burns zoom (`scale 1 → 1.12`); if `videoUrl` is `null`, it's Ken Burns for the whole scene. A 12-frame fade in/out plays between scenes, and `subtitle` is overlaid at the bottom over a gradient scrim for the scene's full duration. A single `<Audio>` spans the whole composition.
 
 **Errors**
 
 | Status | Cause |
 |---|---|
-| 400 | `scenes` empty, or none have a non-null `imageUrl` |
+| 400 | `scenes` empty, or none have both a usable `imageUrl` and a positive `durationInSeconds` |
 | 400 | `audioUrl` missing |
 | 500 | Bundling, composition selection, or the render itself failed (check server logs — Remotion's own error is passed through) |
 
@@ -244,6 +299,7 @@ These aren't routes, but are what the routes above are built on:
 |---|---|
 | `src/lib/groq.ts` | `groqChatCompletion` (raw), `groqChatJson` (forces `response_format: json_object`), `groqChatText` (plain completion). All non-OK responses are normalized through `formatGroqError`, which special-cases HTTP 429 to extract Groq's own "try again in Ns" hint and re-word it cleanly. |
 | `src/lib/gradio.ts` | `generateGhibliImage` — cached `@gradio/client` connection to the image Space. |
-| `src/lib/kokoro.ts` | `generateNarrationMp3` — cached `@gradio/client` connection to the voice Space, plus the WAV→mp3 transcode and duration probe. |
-| `src/lib/segmentStory.ts` | `splitStory` (pulls the trailing reference section off the narrative) and `segmentNarrative` (groups paragraphs into N balanced, contiguous chunks — guarantees exactly N chunks whenever there are at least N paragraphs). |
+| `src/lib/ltxVideo.ts` | `generateSceneClip` — cached `@gradio/client` connection to the LTX-Video Space. |
+| `src/lib/kokoro.ts` | `generateNarrationMp3` — cached `@gradio/client` connection to the voice Space; synthesizes one clip per segment, concatenates, retimes, and transcodes. |
+| `src/lib/segmentStory.ts` | `splitStory` (pulls the trailing reference section off the narrative), `segmentNarrative` (paragraph-level balanced split, used for the story/scenes color-highlighting), and `segmentIntoSentenceGroups` (sentence-level balanced split, used as narration's deterministic fallback). All three share one balancing algorithm (`balanceIntoGroups`) that guarantees exactly N groups whenever there are at least N units. |
 | `src/lib/vectorSearch.ts` | Loads `data/quotes_indexed.json` once per process and scores it against a query — no network call, no LLM. |

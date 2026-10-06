@@ -31,15 +31,17 @@ function toAbsoluteUrl(origin: string, url: string): string {
 
 interface VideoRequestScene {
   imageUrl: string | null;
+  videoUrl: string | null;
   caption: string;
+  subtitle: string;
+  durationInSeconds: number;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { scenes, audioUrl, durationInSeconds } = (await req.json()) as {
+    const { scenes, audioUrl } = (await req.json()) as {
       scenes: VideoRequestScene[];
       audioUrl: string;
-      durationInSeconds: number;
     };
 
     if (!Array.isArray(scenes) || scenes.length === 0) {
@@ -48,21 +50,25 @@ export async function POST(req: NextRequest) {
     if (!audioUrl || typeof audioUrl !== "string") {
       return NextResponse.json({ error: "audioUrl is required." }, { status: 400 });
     }
-    const usableScenes = scenes.filter((s): s is { imageUrl: string; caption: string } => Boolean(s.imageUrl));
+    const usableScenes = scenes.filter(
+      (s): s is VideoRequestScene & { imageUrl: string } => Boolean(s.imageUrl) && s.durationInSeconds > 0
+    );
     if (usableScenes.length === 0) {
-      return NextResponse.json({ error: "No scenes have a generated image yet." }, { status: 400 });
+      return NextResponse.json({ error: "No scenes have a generated image and a timed narration segment yet." }, { status: 400 });
     }
 
     const origin = req.nextUrl.origin;
     const videoScenes: VideoScene[] = usableScenes.map((s) => ({
       imageUrl: toAbsoluteUrl(origin, s.imageUrl),
+      videoUrl: s.videoUrl ? toAbsoluteUrl(origin, s.videoUrl) : null,
       caption: s.caption,
+      subtitle: s.subtitle,
+      durationInSeconds: s.durationInSeconds,
     }));
 
     const inputProps = {
       scenes: videoScenes,
       audioUrl: toAbsoluteUrl(origin, audioUrl),
-      audioDurationInSeconds: typeof durationInSeconds === "number" && durationInSeconds > 0 ? durationInSeconds : 45,
     };
 
     const serveUrl = await getBundle();

@@ -38,6 +38,37 @@
   color: var(--text-secondary);
 }
 
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.controlLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.controlButtons {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.clipProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .audioRow {
   display: flex;
   flex-direction: column;
