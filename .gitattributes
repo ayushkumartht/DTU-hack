@@ -1,0 +1,21 @@
+# Normalize line endings for everyone, regardless of OS/editor config.
+* text=auto eol=lf
+
+# Never try to normalize binary assets.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp3 binary
+*.mp4 binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Installed by the shadcn/Arc CLI (`pnpm dlx shadcn add @uiarc/...`), not
+# hand-written — keep it out of GitHub's language stats and diff review.
+src/components/arc/** linguist-vendored
+src/components/arc/** -diff
+
+# Data pipeline output, not hand-written.
+data/* linguist-generated

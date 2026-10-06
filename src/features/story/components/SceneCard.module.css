@@ -1,0 +1,85 @@
+.wrapper {
+  width: 100%;
+  max-width: 320px;
+  margin-inline: auto;
+  border-top: 3px solid var(--scene-dot, var(--border));
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.1rem 0;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--scene-dot, var(--text-secondary));
+  flex: none;
+}
+
+.sceneLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* 9:16, phone-shaped frame for every scene image/placeholder. */
+.frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  background-color: var(--surface-muted);
+  overflow: hidden;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mockBadge {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 1;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.35));
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.shimmerBlock {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, var(--surface-muted) 40%, var(--surface-raised) 50%, var(--surface-muted) 60%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmerBlock { animation: none; }
+}

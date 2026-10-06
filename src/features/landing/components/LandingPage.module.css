@@ -1,0 +1,145 @@
+.page {
+  min-height: 100vh;
+  background-color: var(--bg-offwhite);
+  color: var(--text-black);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nav {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 0;
+}
+
+.wordmark {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  color: var(--text-black);
+}
+
+.hero {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.1rem;
+  padding: 3rem 1.5rem 2.5rem;
+}
+
+.heroImage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid var(--border-grey);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+  line-height: 1.1;
+}
+
+.divider {
+  width: 50px;
+  height: 1px;
+  background-color: var(--text-grey);
+  opacity: 0.35;
+}
+
+.subtitle {
+  font-size: 1.05rem;
+  color: var(--text-grey);
+  max-width: 560px;
+  line-height: 1.65;
+}
+
+.cta {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--text-black);
+  color: var(--bg-offwhite);
+  border: none;
+  padding: 0.75rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.cta:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.features {
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.75rem;
+  padding: 1.5rem 1.5rem 4rem;
+  border-top: 1px solid var(--border-grey);
+  margin-top: 1rem;
+  padding-top: 3rem;
+}
+
+@media (max-width: 680px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.featureDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-black);
+  opacity: 0.7;
+  margin-bottom: 0.25rem;
+}
+
+.featureTitle {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.featureText {
+  font-size: 0.9rem;
+  color: var(--text-grey);
+  line-height: 1.6;
+}
+
+.footer {
+  width: 100%;
+  max-width: 900px;
+  padding: 0 1.5rem 3rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-grey);
+}

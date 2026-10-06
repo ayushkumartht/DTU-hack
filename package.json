@@ -1,0 +1,37 @@
+{
+  "name": "vivekanand-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.8.0",
+    "@gradio/client": "^2.7.1",
+    "@remotion/bundler": "^4.0.533",
+    "@remotion/player": "^4.0.533",
+    "@remotion/renderer": "^4.0.533",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.4.0",
+    "lucide-react": "^1.52.0",
+    "motion": "^14.0.0",
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "^9.1.0",
+    "remotion": "^4.0.533",
+    "shadcn": "^4.21.3",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5"
+  }
+}

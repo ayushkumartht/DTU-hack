@@ -1,0 +1,96 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 14px);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 48ch;
+}
+
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.audioRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.audioLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.audio {
+  width: 100%;
+}
+
+.playerWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.playerFrame {
+  width: 100%;
+  max-width: 320px;
+  border-radius: var(--radius-panel, 14px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-raised);
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.downloadLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-control, 8px);
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.downloadLink:hover {
+  opacity: 0.9;
+}

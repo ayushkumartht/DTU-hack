@@ -1,0 +1,89 @@
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.markdown {
+  font-size: 1.02rem;
+  line-height: 1.75;
+  color: var(--foreground);
+  word-break: break-word;
+}
+
+.markdown p {
+  margin-bottom: 0.9rem;
+}
+
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 1.25rem 0 0.75rem;
+}
+
+.markdown h3 {
+  font-size: 1.1rem;
+}
+
+.markdown strong {
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 0.9rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.markdown li {
+  line-height: 1.65;
+}
+
+.markdown hr {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 1.25rem 0;
+}
+
+.markdown a {
+  color: var(--foreground);
+  text-decoration: underline;
+  word-break: break-all;
+  font-weight: 500;
+}
+
+.markdown a:hover {
+  color: var(--text-secondary);
+}
+
+/* The story reads as one continuous passage. Each scene's portion is marked
+   only by an underline colored to match its scene card — no block, no
+   divider, no gap between segments. */
+.segmentText {
+  text-decoration-line: underline;
+  text-decoration-color: var(--segment-accent, var(--border));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
+}
+
+.referenceBox {
+  margin-top: 0.25rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-panel, 10px);
+  border: 1px dashed var(--border);
+  background-color: var(--surface-muted);
+}
