@@ -1,4 +1,5 @@
 import { Client } from "@gradio/client";
+import { saveRemoteClip } from "./clipFiles";
 
 // Official Lightricks Space for LTX-Video, their fast distilled model built
 // for short image-to-video clips. Runs on ZeroGPU (shared, quota-limited)
@@ -21,6 +22,58 @@ function connect(hfToken?: string): Promise<Client> {
     });
   }
   return clientPromise;
+}
+
+const NEGATIVE_PROMPT =
+  "worst quality, inconsistent motion, blurry, jittery, distorted, extra limbs, text, watermark, logo, subtitles";
+
+export interface ReelClipResult {
+  videoUrl: string | null;
+  durationInSeconds: number | null;
+  stillUrl: string | null;
+  /** True when no clip was made (switched off, quota, queue, or any failure). */
+  fallback: boolean;
+  reason?: string;
+}
+
+const fallbackClip = (reason: string): ReelClipResult => ({ videoUrl: null, durationInSeconds: null, stillUrl: null, fallback: true, reason });
+
+function friendlyReason(message: string): string {
+  if (/zerogpu|quota|exceeded|gpu/i.test(message)) return `LTX GPU quota used up for today: ${message}`;
+  return message || "LTX generation failed";
+}
+
+/**
+ * Text-to-video: the detailed English shot prompt alone makes the clip, so no still image is needed.
+ * Never throws; any failure degrades to the still-image fallback so the reel always finishes.
+ */
+export async function generateReelClip(prompt: string, hfToken?: string): Promise<ReelClipResult> {
+  if (process.env.REEL_CLIPS === "off") return fallbackClip("motion clips are switched off (REEL_CLIPS=off)");
+  try {
+    const client = await connect(hfToken);
+    const result = await client.predict("/text_to_video", {
+      prompt,
+      negative_prompt: NEGATIVE_PROMPT,
+      height_ui: SCENE_CLIP_HEIGHT,
+      width_ui: SCENE_CLIP_WIDTH,
+      mode: "text-to-video",
+      duration_ui: SCENE_CLIP_SECONDS,
+      seed_ui: 42,
+      randomize_seed: true,
+      ui_guidance_scale: 1,
+      // The second texture pass costs extra GPU time from a small daily quota; skipping it buys more clips.
+      improve_texture_flag: false,
+    });
+
+    const first = (result.data as unknown[])?.[0] as { url?: string; video?: { url?: string } } | string | null;
+    const remote = typeof first === "string" ? first : first?.video?.url ?? first?.url ?? null;
+    if (!remote) return fallbackClip("LTX returned no video");
+
+    const saved = await saveRemoteClip(remote, hfToken);
+    return { ...saved, fallback: false };
+  } catch (err: any) {
+    return fallbackClip(friendlyReason(err?.message ?? ""));
+  }
 }
 
 export interface SceneClipResult {

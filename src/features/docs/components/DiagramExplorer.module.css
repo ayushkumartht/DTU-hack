@@ -1,0 +1,423 @@
+.root {
+  --navy: #0b1f4d;
+  --saffron: #ff9933;
+  --saffron-ink: #c2570c;
+  --green-ink: #0f6e06;
+  --line: #ececec;
+  --muted: #6b6b6b;
+  --faint: #9a9a9a;
+
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 30px 60px -40px rgba(11, 31, 77, 0.35);
+  overflow: hidden;
+}
+
+.fullscreen {
+  border-radius: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen .body {
+  flex: 1;
+  min-height: 0;
+}
+
+.fullscreen .viewport {
+  height: 100%;
+}
+
+/* ---------- tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf7;
+}
+
+.tab,
+.tabOn {
+  flex: none;
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: #111;
+}
+
+.tabOn {
+  color: var(--navy);
+  font-weight: 600;
+  border-bottom-color: var(--saffron);
+}
+
+/* ---------- head ---------- */
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 22px 24px 16px;
+}
+
+.title {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.summary {
+  margin-top: 4px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  max-width: 40rem;
+  line-height: 1.5;
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool,
+.toolText {
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  color: #222;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.tool {
+  width: 34px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.toolText {
+  padding: 0 12px;
+}
+
+.tool:hover,
+.toolText:hover {
+  border-color: var(--navy);
+  background: #f5f7ff;
+}
+
+.zoom {
+  min-width: 42px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- canvas ---------- */
+.body {
+  position: relative;
+  border-top: 1px solid var(--line);
+}
+
+.viewport {
+  position: relative;
+  height: 640px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 1px 1px, #dcdcd6 1px, transparent 0) 0 0 / 22px 22px,
+    #fcfcfa;
+  user-select: none;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.state code {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #b91c1c;
+}
+
+.source {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 24px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #1f2937;
+  background: #fff;
+  user-select: text;
+  cursor: auto;
+}
+
+.hint {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Boxes of a flowchart are clickable; the selected one is ringed in saffron. */
+.stageClickable :global(g.node) {
+  cursor: pointer;
+}
+
+.stageClickable :global(g.node rect),
+.stageClickable :global(g.node polygon),
+.stageClickable :global(g.node path),
+.stageClickable :global(g.node circle) {
+  transition: stroke 0.15s ease, filter 0.15s ease;
+}
+
+.stageClickable :global(g.node:hover rect),
+.stageClickable :global(g.node:hover polygon),
+.stageClickable :global(g.node:hover path) {
+  filter: drop-shadow(0 4px 10px rgba(11, 31, 77, 0.25));
+}
+
+.stage :global(g.node.is-selected rect),
+.stage :global(g.node.is-selected polygon),
+.stage :global(g.node.is-selected path),
+.stage :global(g.node.is-selected circle) {
+  stroke: #ff9933 !important;
+  stroke-width: 3.5px !important;
+}
+
+.stage :global(svg) {
+  display: block;
+  overflow: visible;
+}
+
+/* ---------- details panel ---------- */
+/* The details card floats over the canvas, so the picture keeps the full width. */
+.panel {
+  padding: 22px 22px 24px;
+  background: #fff;
+  overflow-y: auto;
+}
+
+.panelOpen {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 340px;
+  max-height: calc(100% - 28px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 24px 50px -24px rgba(11, 31, 77, 0.45);
+  animation: panelIn 0.22s ease;
+}
+
+.panelIdle {
+  display: none;
+}
+
+.panelSteps {
+  border-top: 1px solid var(--line);
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelOpen {
+    animation: none;
+  }
+}
+
+.panelKicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--saffron-ink);
+}
+
+.panelTitle {
+  margin-top: 8px;
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.panelText {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  line-height: 1.62;
+  color: #3a3a3a;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  background: #ecf7ea;
+  color: var(--green-ink);
+}
+
+.block {
+  margin-top: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.blockLabel {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.pkg {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.84rem;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.pkg code {
+  color: var(--navy);
+  font-size: 0.8rem;
+}
+
+.file {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fbfaf7;
+  border: 1px solid var(--line);
+  font-size: 0.76rem;
+  color: #333;
+  word-break: break-all;
+}
+
+.clear {
+  margin-top: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.steps {
+  margin-top: 12px;
+  padding-left: 18px;
+  display: grid;
+  gap: 12px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #3a3a3a;
+}
+
+.legend {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.legendItem {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  color: #222;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.legendItem:hover {
+  border-color: var(--saffron);
+  background: #fff7ee;
+}
+
+@media (max-width: 900px) {
+  .viewport {
+    height: 460px;
+  }
+
+  .panelOpen {
+    position: static;
+    width: auto;
+    max-height: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .head {
+    padding: 18px 16px 14px;
+  }
+}

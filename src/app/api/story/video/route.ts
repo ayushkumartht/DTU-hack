@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
+import { getBinariesDirectory } from "@/lib/ffmpegPath";
 import type { VideoScene } from "@/remotion/StoryVideo";
 
 export const runtime = "nodejs";
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest) {
       codec: "h264",
       outputLocation,
       inputProps,
+      binariesDirectory: getBinariesDirectory(),
     });
 
     return NextResponse.json({ videoUrl: `/generated/video-${id}.mp4` });

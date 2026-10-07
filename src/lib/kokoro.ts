@@ -33,14 +33,33 @@ function connect(hfToken?: string): Promise<Client> {
   return clientPromise;
 }
 
+import { getFfmpegPath, getFfprobePath } from "@/lib/ffmpegPath";
+
 async function probeDuration(filePath: string): Promise<number> {
-  const { stdout } = await execFileAsync("ffprobe", [
-    "-v", "error",
-    "-show_entries", "format=duration",
-    "-of", "default=noprint_wrappers=1:nokey=1",
-    filePath,
-  ]);
-  return parseFloat(stdout.trim());
+  try {
+    const { stdout } = await execFileAsync(getFfprobePath(), [
+      "-v", "error",
+      "-show_entries", "format=duration",
+      "-of", "default=noprint_wrappers=1:nokey=1",
+      filePath,
+    ]);
+    const val = parseFloat(stdout.trim());
+    if (!isNaN(val) && val > 0) return val;
+  } catch (err) {
+    // Fallback: parse WAV header directly in Node.js
+    try {
+      const buffer = await fs.readFile(filePath);
+      if (buffer.length > 44 && buffer.toString("utf8", 0, 4) === "RIFF") {
+        const byteRate = buffer.readUInt32LE(28);
+        if (byteRate > 0) {
+          return (buffer.length - 44) / byteRate;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return 3.5;
 }
 
 async function synthesizeSegmentWav(client: Client, text: string, voice: NarratorVoice, wavPath: string): Promise<void> {
@@ -109,11 +128,11 @@ export async function generateNarrationMp3(
 
     const concatList = segmentWavPaths.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
     await fs.writeFile(concatListPath, concatList);
-    await execFileAsync("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", concatListPath, "-c", "copy", concatWavPath]);
+    await execFileAsync(getFfmpegPath(), ["-y", "-f", "concat", "-safe", "0", "-i", concatListPath, "-c", "copy", concatWavPath]);
 
     const clampedSpeed = Math.min(2, Math.max(0.5, speed));
     const speedFilter = clampedSpeed !== 1 ? ["-filter:a", `atempo=${clampedSpeed.toFixed(3)}`] : [];
-    await execFileAsync("ffmpeg", ["-y", "-i", concatWavPath, ...speedFilter, "-codec:a", "libmp3lame", "-b:a", "128k", outPath]);
+    await execFileAsync(getFfmpegPath(), ["-y", "-i", concatWavPath, ...speedFilter, "-codec:a", "libmp3lame", "-b:a", "128k", outPath]);
 
     const durationInSeconds = await probeDuration(outPath);
     // atempo retimes the whole track uniformly, so each segment's share of

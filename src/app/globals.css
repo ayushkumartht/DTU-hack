@@ -37,6 +37,12 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 ::selection {
   background-color: var(--text-black);
   color: var(--bg-offwhite);

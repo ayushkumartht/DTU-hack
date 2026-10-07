@@ -34,8 +34,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { imageUrl, seed } = await generateGhibliImage(imagePrompt, hfToken);
-    return NextResponse.json({ imageUrl, seed, mock: false });
+    try {
+      const { imageUrl, seed } = await generateGhibliImage(imagePrompt, hfToken);
+      return NextResponse.json({ imageUrl, seed, mock: false });
+    } catch (error: any) {
+      console.warn("Scene image generation failed (falling back to mock placeholder):", error?.message || error);
+      return NextResponse.json({
+        imageUrl: MOCK_IMAGE_URL,
+        seed: null,
+        mock: true,
+        warning: "ZeroGPU quota limit hit or Space busy — using placeholder image so video can continue.",
+      });
+    }
   } catch (error: any) {
     console.error("Scene image generation error:", error);
     return NextResponse.json(

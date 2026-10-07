@@ -31,6 +31,11 @@ interface GroqChatOptions {
   maxTokens?: number;
   json?: boolean;
   stream?: boolean;
+  /**
+   * gpt-oss reasons before answering and that hidden thinking counts against max_tokens.
+   * "low" keeps long prompts from spending the whole budget thinking and returning nothing.
+   */
+  reasoningEffort?: "low" | "medium" | "high";
 }
 
 export async function groqChatCompletion({
@@ -40,6 +45,7 @@ export async function groqChatCompletion({
   maxTokens = 1500,
   json = false,
   stream = false,
+  reasoningEffort,
 }: GroqChatOptions): Promise<Response> {
   const res = await fetch(GROQ_CHAT_URL, {
     method: "POST",
@@ -54,6 +60,7 @@ export async function groqChatCompletion({
       max_tokens: maxTokens,
       stream,
       ...(json ? { response_format: { type: "json_object" } } : {}),
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     }),
   });
 

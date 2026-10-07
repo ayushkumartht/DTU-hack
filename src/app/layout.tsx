@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter, Geist } from "next/font/google";
+import { Playfair_Display, Inter, Geist, Noto_Sans_Devanagari, Poppins } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import "@/components/arc/foundation.css";
@@ -31,6 +31,21 @@ const inter = Inter({
   display: "swap",
 });
 
+// Inter has no Devanagari glyphs; listing this after it in a font stack renders Hindi cleanly.
+const devanagari = Noto_Sans_Devanagari({
+  subsets: ["devanagari"],
+  variable: "--font-devanagari",
+  display: "swap",
+});
+
+// Headings on the landing page: a familiar, widely used sans-serif.
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-poppins",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Learning of Vivekanand",
   description: "A minimal digital sanctuary presenting the profound teachings and philosophy of Swami Vivekananda.",
@@ -49,7 +64,7 @@ export default function RootLayout({
       // from localStorage / prefers-color-scheme — expected to differ from
       // the server-rendered markup, so React shouldn't warn about it.
       suppressHydrationWarning
-      className={cn(playfair.variable, inter.variable, "font-sans", geist.variable)}
+      className={cn(playfair.variable, inter.variable, devanagari.variable, poppins.variable, "font-sans", geist.variable)}
     >
       <body>
         <Script id="theme-init" strategy="beforeInteractive">
